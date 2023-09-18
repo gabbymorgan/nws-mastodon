@@ -28,8 +28,9 @@ const postAlert = async (alert) => {
     )
     .then((response) => {
       POSTED_ACTIVE_ALERTS.push(alert.id);
+      console.log(POSTED_ACTIVE_ALERTS);
     })
-    .catch((error) => console.log(error.response.data));
+    .catch((error) => console.log(error.response));
 };
 
 const postAllAlerts = async (alerts) =>
@@ -40,4 +41,4 @@ async function main() {
   await postAllAlerts(activeAlerts);
 }
 
-setInterval(() => main().catch((err) => console.log(err)), 60000);
+setInterval(() => main().catch((err) => console.log(err)), 5000);
