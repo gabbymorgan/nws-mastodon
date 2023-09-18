@@ -1,8 +1,12 @@
 import axios from "axios";
 import dotenv from "dotenv";
+import {
+  appendPostedAlertToJson,
+  removeAlertFromJson,
+  getPostedAlerts,
+} from "./storage.js";
 
 dotenv.config();
-const POSTED_ACTIVE_ALERTS = [];
 
 axios.defaults.headers.common[
   "Authorization"
@@ -17,7 +21,8 @@ const getActiveAlertsForZone = async () => {
 };
 
 const postAlert = async (alert) => {
-  if (POSTED_ACTIVE_ALERTS.includes(alert.id)) {
+  const postedAlerts = getPostedAlerts();
+  if (postedAlerts.find((postedAlert) => postedAlert.alertId === alert.id)) {
     return;
   }
   await axios
@@ -27,18 +32,43 @@ const postAlert = async (alert) => {
       { headers: { Authorization: `Bearer ${process.env.AUTH_TOKEN}` } }
     )
     .then((response) => {
-      POSTED_ACTIVE_ALERTS.push(alert.id);
-      console.log(POSTED_ACTIVE_ALERTS);
+      appendPostedAlertToJson({
+        alertId: alert.id,
+        statusId: response.data.id,
+      });
     })
     .catch((error) => console.log(error.response));
 };
 
-const postAllAlerts = async (alerts) =>
-  await Promise.all(alerts.map(async (alert) => await postAlert(alert)));
+const postAlerts = async (alertIds) =>
+  await Promise.all(alertIds.map(async (alert) => await postAlert(alert)));
+
+const deleteAlert = async (alert) => {
+  await axios.delete(
+    `https://${process.env.DOMAIN_NAME}/api/v1/statuses/${alert.statusId}`
+  );
+  removeAlertFromJson(alert.alertId);
+  console.log(alert + " removed!");
+};
+
+const deleteInactiveAlerts = async (activeAlertIds) => {
+  const postedAlerts = getPostedAlerts();
+  const inactivePostedAlerts = [...postedAlerts].filter((postedAlert) =>
+    activeAlertIds.includes(postedAlert.alertId)
+  );
+
+  return await Promise.all(
+    inactivePostedAlerts.map(
+      async (inactiveAlertId) => await deleteAlert(inactiveAlertId)
+    )
+  );
+};
 
 async function main() {
-  const activeAlerts = await getActiveAlertsForZone();
-  await postAllAlerts(activeAlerts);
+  const activeAlertIds = await getActiveAlertsForZone();
+  await deleteInactiveAlerts(activeAlertIds);
+  await postAlerts(activeAlertIds);
 }
 
-setInterval(() => main().catch((err) => console.log(err)), 5000);
+main();
+setInterval(() => main().catch((err) => console.log(err)), 30000);

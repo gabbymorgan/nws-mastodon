@@ -5,7 +5,7 @@
   "author": "Gabriella Morgan <gabriellapelton@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "build": "babel app.js -d dist",
+    "build": "babel *.js -d dist",
     "start": "yarn build && node dist/app.js"
   },
   "dependencies": {

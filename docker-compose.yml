@@ -1,7 +1,12 @@
 services:
   app:
     image: node:18-alpine
-    command: sh -c "yarn install && yarn start"
+    command:
+      - sh
+      - -c
+      - |
+        [ ! -e posted-alerts.json ]; echo [] >> posted-alerts.json
+        yarn install && yarn start
     ports:
       - 127.0.0.1:3000:3000
     working_dir: /app
