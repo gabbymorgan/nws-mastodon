@@ -1,7 +1,7 @@
 {
   "name": "nws-mastodon",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "app.js",
   "author": "Gabriella Morgan <gabriellapelton@gmail.com>",
   "license": "MIT",
   "scripts": {
