@@ -4,3 +4,8 @@ export const parseDescription = (description) => {
     "\n\n#Denton #DentonWeather #DentonTX #DentonAlerts"
   );
 };
+
+export const formatLog = ({ error, method }) => {
+  const errorMessage = error.toString();
+  return `\n[${new Date().toLocaleString("en-US")}] - "${method}" ${error}`;
+};

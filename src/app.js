@@ -3,6 +3,7 @@ import {
   appendPostedAlertToJson,
   removeAlertFromJson,
   getPostedAlerts,
+  logErrorToFile,
 } from "./storage.js";
 import { parseDescription } from "./textHandlers.js";
 
@@ -17,8 +18,9 @@ const getActiveAlertsForZone = async () => {
       { headers: { "User-Agent": process.env.NWS_API_USER_AGENT } }
     );
     return getActiveAlertsForZoneResponse.data.features;
-  } catch (err) {
-    console.log(err);
+  } catch (error) {
+    logErrorToFile({ error, method: "getActiveAlertsForZone" });
+    return [];
   }
 };
 
@@ -40,8 +42,8 @@ const postAlert = async (alert) => {
           statusId: response.data.id,
         });
       });
-  } catch (err) {
-    console.log(err);
+  } catch (error) {
+    logErrorToFile({ error, method: "postAlert" });
   }
 };
 
@@ -54,8 +56,8 @@ const deleteAlert = async (alert) => {
       `https://${process.env.DOMAIN_NAME}/api/v1/statuses/${alert.statusId}`
     );
     removeAlertFromJson(alert.alertId);
-  } catch (err) {
-    console.log(err);
+  } catch (error) {
+    logErrorToFile({ error, method: "deleteAlert" });
   }
 };
 
@@ -75,8 +77,8 @@ const deleteInactiveAlerts = async (activeAlerts) => {
         async (inactiveAlert) => await deleteAlert(inactiveAlert)
       )
     );
-  } catch (err) {
-    console.log(err);
+  } catch (error) {
+    logErrorToFile({ error, method: "deleteInactiveAlerts" });
   }
 };
 
@@ -85,10 +87,13 @@ async function main() {
     const activeAlerts = await getActiveAlertsForZone();
     await deleteInactiveAlerts(activeAlerts);
     await postAlerts(activeAlerts);
-  } catch (err) {
-    console.log(err);
+  } catch (error) {
+    logErrorToFile({ error, method: "main" });
   }
 }
 
 main();
-setInterval(() => main().catch((err) => console.log(err)), 30000);
+setInterval(
+  () => main().catch((error) => logErrorToFile({ error, method: "" })),
+  30000
+);

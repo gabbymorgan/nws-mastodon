@@ -1,4 +1,5 @@
 import fs from "fs";
+import { formatLog } from "./textHandlers";
 
 export const appendPostedAlertToJson = (postedAlert) => {
   const postedAlerts = JSON.parse(
@@ -18,3 +19,7 @@ export const removeAlertFromJson = (alertId) => {
 
 export const getPostedAlerts = () =>
   JSON.parse(fs.readFileSync("./posted-alerts.json", "utf-8"));
+
+export const logErrorToFile = (errorLogObject) => {
+  fs.appendFileSync("./errors.log", formatLog(errorLogObject));
+};
