@@ -9,6 +9,7 @@ export const appendPostedAlertToJson = (postedAlert) => {
 };
 
 export const removeAlertFromJson = (alertId) => {
+  const postedAlerts = getPostedAlerts();
   const updatedAlerts = [...postedAlerts].filter(
     (postedAlert) => postedAlert.alertId !== alertId
   );

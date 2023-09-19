@@ -40,8 +40,8 @@ const postAlert = async (alert) => {
     .catch((error) => console.log(error.response));
 };
 
-const postAlerts = async (alertIds) =>
-  await Promise.all(alertIds.map(async (alert) => await postAlert(alert)));
+const postAlerts = async (alerts) =>
+  await Promise.all(alerts.map(async (alert) => await postAlert(alert)));
 
 const deleteAlert = async (alert) => {
   await axios.delete(
@@ -51,23 +51,27 @@ const deleteAlert = async (alert) => {
   console.log(alert + " removed!");
 };
 
-const deleteInactiveAlerts = async (activeAlertIds) => {
+const deleteInactiveAlerts = async (activeAlerts) => {
   const postedAlerts = getPostedAlerts();
-  const inactivePostedAlerts = [...postedAlerts].filter((postedAlert) =>
-    activeAlertIds.includes(postedAlert.alertId)
+  // O(n^2), but I'm not going to waste time optimizing for this use case
+  const inactivePostedAlerts = [...postedAlerts].filter(
+    (postedAlert) =>
+      !activeAlerts.find(
+        (activeAlert) => activeAlert.id === postedAlert.alertId
+      )
   );
 
   return await Promise.all(
     inactivePostedAlerts.map(
-      async (inactiveAlertId) => await deleteAlert(inactiveAlertId)
+      async (inactiveAlert) => await deleteAlert(inactiveAlert)
     )
   );
 };
 
 async function main() {
-  const activeAlertIds = await getActiveAlertsForZone();
-  await deleteInactiveAlerts(activeAlertIds);
-  await postAlerts(activeAlertIds);
+  const activeAlerts = await getActiveAlertsForZone();
+  await deleteInactiveAlerts(activeAlerts);
+  await postAlerts(activeAlerts);
 }
 
 main();
