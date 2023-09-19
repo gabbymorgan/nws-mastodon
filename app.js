@@ -1,12 +1,9 @@
 import axios from "axios";
-import dotenv from "dotenv";
 import {
   appendPostedAlertToJson,
   removeAlertFromJson,
   getPostedAlerts,
 } from "./storage.js";
-
-dotenv.config();
 
 axios.defaults.headers.common[
   "Authorization"

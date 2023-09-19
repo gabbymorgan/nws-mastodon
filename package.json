@@ -15,7 +15,6 @@
   "devDependencies": {
     "@babel/cli": "^7.22.15",
     "@babel/core": "^7.22.20",
-    "@babel/preset-env": "^7.22.20",
-    "dotenv": "^16.3.1"
+    "@babel/preset-env": "^7.22.20"
   }
 }

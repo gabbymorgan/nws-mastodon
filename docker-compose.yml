@@ -1,11 +1,12 @@
 services:
   app:
     image: node:18-alpine
+    restart: always
     command:
       - sh
       - -c
       - |
-        [ ! -e posted-alerts.json ]; echo [] >> posted-alerts.json
+        if(([ ! -e posted-alerts.json ])) then (echo [] >> posted-alerts.json) fi
         yarn install && yarn start
     ports:
       - 127.0.0.1:3000:3000
