@@ -4,6 +4,7 @@ import {
   removeAlertFromJson,
   getPostedAlerts,
 } from "./storage.js";
+import { parseDescription } from "./textHandlers.js";
 
 axios.defaults.headers.common[
   "Authorization"
@@ -25,7 +26,7 @@ const postAlert = async (alert) => {
   await axios
     .post(
       `https://${process.env.DOMAIN_NAME}/api/v1/statuses`,
-      { status: alert.properties.description },
+      { status: parseDescription(alert.properties.description) },
       { headers: { Authorization: `Bearer ${process.env.AUTH_TOKEN}` } }
     )
     .then((response) => {
@@ -34,7 +35,7 @@ const postAlert = async (alert) => {
         statusId: response.data.id,
       });
     })
-    .catch((error) => console.log(error.response));
+    .catch((error) => console.log(error));
 };
 
 const postAlerts = async (alerts) =>
@@ -45,7 +46,6 @@ const deleteAlert = async (alert) => {
     `https://${process.env.DOMAIN_NAME}/api/v1/statuses/${alert.statusId}`
   );
   removeAlertFromJson(alert.alertId);
-  console.log(alert + " removed!");
 };
 
 const deleteInactiveAlerts = async (activeAlerts) => {
