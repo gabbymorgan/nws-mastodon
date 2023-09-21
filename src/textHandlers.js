@@ -1,7 +1,8 @@
 export const parseDescription = (description) => {
   return (
-    description.replaceAll(/www/g, "https://www") +
-    "\n\n" + process.env.TAGLINE
+    process.env.HEADER + "\n" +
+    description.replaceAll(/www/g, "https://www") + "\n\n" +
+    process.env.FOOTER
   );
 };
 
