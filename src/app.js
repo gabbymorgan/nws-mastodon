@@ -4,6 +4,7 @@ import {
   removeAlertFromJson,
   getPostedAlerts,
   logErrorToFile,
+  initializeStorage,
 } from "./storage.js";
 import { parseDescription } from "./textHandlers.js";
 
@@ -84,6 +85,7 @@ const deleteInactiveAlerts = async (activeAlerts) => {
 
 async function main() {
   try {
+    initializeStorage();
     const activeAlerts = await getActiveAlertsForZone();
     await deleteInactiveAlerts(activeAlerts);
     await postAlerts(activeAlerts);
