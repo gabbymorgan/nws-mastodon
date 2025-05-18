@@ -6,7 +6,7 @@ import {
   logErrorToFile,
   initializeStorage,
 } from "./storage.js";
-import { parseDescription } from "./textHandlers.js";
+import { parseHeadline } from "./textHandlers.js";
 
 axios.defaults.headers.common[
   "Authorization"
@@ -20,12 +20,14 @@ const getActiveAlertsForZone = async () => {
     );
     return getActiveAlertsForZoneResponse.data.features;
   } catch (error) {
+    console.log(error)
     logErrorToFile({ error, method: "getActiveAlertsForZone" });
     return [];
   }
 };
 
 const postAlert = async (alert) => {
+  console.log(alert)
   try {
     const postedAlerts = getPostedAlerts();
     if (postedAlerts.find((postedAlert) => postedAlert.alertId === alert.id)) {
@@ -34,7 +36,7 @@ const postAlert = async (alert) => {
     await axios
       .post(
         `https://${process.env.DOMAIN_NAME}/api/v1/statuses`,
-        { status: parseDescription(alert.properties.description) },
+        { status: parseHeadline(alert.properties.headline) },
         { headers: { Authorization: `Bearer ${process.env.AUTH_TOKEN}` } }
       )
       .then((response) => {

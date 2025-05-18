@@ -1,7 +1,7 @@
-export const parseDescription = (description) => {
+export const parseHeadline = (headline) => {
   return (
     process.env.HEADER + "\n" +
-    description.replaceAll(/www/g, "https://www") + "\n\n" +
+    headline.replaceAll(/www/g, "https://www") + "\n\n" +
     process.env.FOOTER
   );
 };
