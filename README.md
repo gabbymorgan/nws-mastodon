@@ -9,4 +9,5 @@
    - NWS_API_USER_AGENT: A self-determined string to identify yourself with to the [NWS API](https://www.weather.gov/documentation/services-web-api).
    - HEADER: Whatever you want displayed above the alert.
    - FOOTER: Whatever you want displayed below the alert.
+   - MAX_CHARACTERS: The character limit for the Mastodon instance. The default is 500.
 3. Run with [Docker](https://docs.docker.com/engine/install/) using `docker compose up -d`
