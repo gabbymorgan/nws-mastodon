@@ -1,12 +1,17 @@
 import axios from "axios";
 import {
-  appendPostedAlertToJson,
+  addPostedAlertToJson,
   removeAlertFromJson,
   getPostedAlerts,
-  logErrorToFile,
+  logError,
   initializeStorage,
 } from "./storage.js";
-import { parsePost } from "./textHandlers.js";
+import { formatHeadStatus, formatNonheadStatus } from "./textHandlers.js";
+import {
+  deleteStatus,
+  postHeadStatus,
+  postNonheadStatus,
+} from "./weatherAPI.js";
 
 axios.defaults.headers.common[
   "Authorization"
@@ -20,7 +25,7 @@ const getActiveAlertsForZone = async () => {
     );
     return getActiveAlertsForZoneResponse.data.features;
   } catch (error) {
-    logErrorToFile({ error, method: "getActiveAlertsForZone" });
+    logError({ error, method: "getActiveAlertsForZone" });
     return [];
   }
 };
@@ -31,6 +36,7 @@ const postAlert = async (alert) => {
     if (postedAlerts.find((postedAlert) => postedAlert.alertId === alert.id)) {
       return;
     }
+
     const alertComponents = [alert.properties.headline];
     if (alert.properties.parameters.NWSheadline) {
       alertComponents.push(alert.properties.parameters.NWSheadline[0]);
@@ -38,22 +44,54 @@ const postAlert = async (alert) => {
     if (alert.properties.description) {
       alertComponents.push(alert.properties.description);
     }
-    await axios
-      .post(
-        `https://${process.env.DOMAIN_NAME}/api/v1/statuses`,
-        {
-          status: parsePost(alertComponents, alert.id),
-        },
-        { headers: { Authorization: `Bearer ${process.env.AUTH_TOKEN}` } }
-      )
-      .then((response) => {
-        appendPostedAlertToJson({
-          alertId: alert.id,
-          statusId: response.data.id,
-        });
+
+    let messageBody = alertComponents.join("\n\n");
+    const formatHeadStatusResponse = formatHeadStatus(messageBody, alert.id);
+    if (formatHeadStatusResponse.error) {
+      logError({
+        error: formatHeadStatusResponse.error,
+        method: "formatHeadStatus",
       });
+    }
+    messageBody = formatHeadStatusResponse.remainder;
+    const postHeadStatusResponse = await postHeadStatus(
+      formatHeadStatusResponse.statusMessage
+    );
+    if (postHeadStatusResponse.error) {
+      logError({
+        error: postHeadStatusResponse.error,
+        method: "postHeadStatus",
+      });
+      return;
+    }
+    let previousStatusId = postHeadStatusResponse.response.id;
+    const statusIds = [previousStatusId];
+    while (messageBody && messageBody.length) {
+      const formatNonheadStatusResponse = formatNonheadStatus(messageBody);
+      if (formatNonheadStatusResponse.error) {
+        logError({
+          error: formatNonheadStatusResponse.error,
+          method: "formatNonheadStatus",
+        });
+      }
+      const postNonheadStatusResponse = await postNonheadStatus(
+        formatNonheadStatusResponse.statusMessage,
+        previousStatusId
+      );
+      if (postNonheadStatusResponse.error) {
+        logError({
+          error: postNonheadStatusResponse.error,
+          method: "postNonheadStatus",
+        });
+        return;
+      }
+      previousStatusId = postNonheadStatusResponse.response.id;
+      statusIds.push(previousStatusId);
+      messageBody = formatNonheadStatusResponse.remainder;
+    }
+    addPostedAlertToJson(alert.id, statusIds);
   } catch (error) {
-    logErrorToFile({ error, method: "postAlert" });
+    logError({ error, method: "postAlert" });
   }
 };
 
@@ -62,12 +100,12 @@ const postAlerts = async (alerts) =>
 
 const deleteAlert = async (alert) => {
   try {
-    await axios.delete(
-      `https://${process.env.DOMAIN_NAME}/api/v1/statuses/${alert.statusId}`
-    );
+    for (const statusId of alert.statusIds) {
+      await deleteStatus(statusId);
+    }
     removeAlertFromJson(alert.alertId);
   } catch (error) {
-    logErrorToFile({ error, method: "deleteAlert" });
+    logError({ error, method: "deleteAlert" });
   }
 };
 
@@ -88,7 +126,7 @@ const deleteInactiveAlerts = async (activeAlerts) => {
       )
     );
   } catch (error) {
-    logErrorToFile({ error, method: "deleteInactiveAlerts" });
+    logError({ error, method: "deleteInactiveAlerts" });
   }
 };
 
@@ -99,12 +137,12 @@ async function main() {
     await deleteInactiveAlerts(activeAlerts);
     await postAlerts(activeAlerts);
   } catch (error) {
-    logErrorToFile({ error, method: "main" });
+    logError({ error, method: "main" });
   }
 }
 
 main();
 setInterval(
-  () => main().catch((error) => logErrorToFile({ error, method: "" })),
+  () => main().catch((error) => logError({ error, method: "" })),
   30000
 );

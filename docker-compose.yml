@@ -1,0 +1,8 @@
+services:
+  nws-mastodon:
+    image: nws-mastodon
+    container_name: nws-mastodon
+    env_file: .env
+    command: yarn start
+
+
