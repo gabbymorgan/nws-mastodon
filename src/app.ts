@@ -5,35 +5,42 @@ import {
   getPostedAlerts,
   logError,
   initializeStorage,
-} from "./storage.js";
-import { formatHeadStatus, formatNonheadStatus } from "./textHandlers.js";
+} from "./storage";
 import {
-  deleteStatus,
-  postHeadStatus,
-  postNonheadStatus,
-} from "./weatherAPI.js";
+  formatErrorLogEntry,
+  formatHeadStatus,
+  formatNonheadStatus,
+} from "./textFormatting";
+import { deleteStatus, postHeadStatus, postNonheadStatus } from "./weatherAPI";
+import { NWSAlert, PostedAlert } from "./types";
 
 axios.defaults.headers.common[
   "Authorization"
 ] = `Bearer ${process.env.AUTH_TOKEN}`;
 
-const getActiveAlertsForZone = async () => {
+const INTERVAL = Number(process.env.INTERVAL) || 30;
+
+const getActiveAlertsForZone = async (): Promise<NWSAlert[]> => {
   try {
-    const getActiveAlertsForZoneResponse = await axios.get(
+    const getAlertsResponse = await axios.get(
       `https://api.weather.gov/alerts/active?zone=${process.env.NWS_ALERT_ZONE}`,
       { headers: { "User-Agent": process.env.NWS_API_USER_AGENT } }
     );
-    return getActiveAlertsForZoneResponse.data.features;
+    return getAlertsResponse.data.features;
   } catch (error) {
-    logError({ error, method: "getActiveAlertsForZone" });
+    logError(formatErrorLogEntry(error, "getActiveAlertsForZone"));
     return [];
   }
 };
 
-const postAlert = async (alert) => {
+const postAlert = async (alert: NWSAlert) => {
   try {
     const postedAlerts = getPostedAlerts();
-    if (postedAlerts.find((postedAlert) => postedAlert.alertId === alert.id)) {
+    if (
+      postedAlerts.find(
+        (postedAlert: PostedAlert) => postedAlert.alertId === alert.id
+      )
+    ) {
       return;
     }
 
@@ -47,72 +54,48 @@ const postAlert = async (alert) => {
 
     let messageBody = alertComponents.join("\n\n");
     const formatHeadStatusResponse = formatHeadStatus(messageBody, alert.id);
-    if (formatHeadStatusResponse.error) {
-      logError({
-        error: formatHeadStatusResponse.error,
-        method: "formatHeadStatus",
-      });
-    }
     messageBody = formatHeadStatusResponse.remainder;
     const postHeadStatusResponse = await postHeadStatus(
-      formatHeadStatusResponse.statusMessage
+      formatHeadStatusResponse.formattedText
     );
-    if (postHeadStatusResponse.error) {
-      logError({
-        error: postHeadStatusResponse.error,
-        method: "postHeadStatus",
-      });
-      return;
-    }
-    let previousStatusId = postHeadStatusResponse.response.id;
+
+    let previousStatusId = postHeadStatusResponse.response?.data.id;
     const statusIds = [previousStatusId];
+
     while (messageBody && messageBody.length) {
       const formatNonheadStatusResponse = formatNonheadStatus(messageBody);
-      if (formatNonheadStatusResponse.error) {
-        logError({
-          error: formatNonheadStatusResponse.error,
-          method: "formatNonheadStatus",
-        });
-      }
+
       const postNonheadStatusResponse = await postNonheadStatus(
-        formatNonheadStatusResponse.statusMessage,
+        formatNonheadStatusResponse.formattedText,
         previousStatusId
       );
-      if (postNonheadStatusResponse.error) {
-        logError({
-          error: postNonheadStatusResponse.error,
-          method: "postNonheadStatus",
-        });
-        return;
-      }
-      previousStatusId = postNonheadStatusResponse.response.id;
+      previousStatusId = postNonheadStatusResponse.response?.data.id;
       statusIds.push(previousStatusId);
       messageBody = formatNonheadStatusResponse.remainder;
     }
     addPostedAlertToJson(alert.id, statusIds);
   } catch (error) {
-    logError({ error, method: "postAlert" });
+    logError(formatErrorLogEntry(error, "postAlert"));
   }
 };
 
-const postAlerts = async (alerts) =>
+const postAlerts = async (alerts: NWSAlert[]) =>
   await Promise.all(alerts.map(async (alert) => await postAlert(alert)));
 
-const deleteAlert = async (alert) => {
+const deleteAlert = async (alert: PostedAlert) => {
   try {
     for (const statusId of alert.statusIds) {
       await deleteStatus(statusId);
     }
     removeAlertFromJson(alert.alertId);
   } catch (error) {
-    logError({ error, method: "deleteAlert" });
+    logError(formatErrorLogEntry(error, "deleteAlert"));
   }
 };
 
-const deleteInactiveAlerts = async (activeAlerts) => {
+const deleteInactiveAlerts = async (activeAlerts: NWSAlert[]) => {
   try {
     const postedAlerts = getPostedAlerts();
-    // O(n^2), but I'm not going to waste time optimizing for this use case
     const inactivePostedAlerts = [...postedAlerts].filter(
       (postedAlert) =>
         !activeAlerts.find(
@@ -126,23 +109,29 @@ const deleteInactiveAlerts = async (activeAlerts) => {
       )
     );
   } catch (error) {
-    logError({ error, method: "deleteInactiveAlerts" });
+    logError(formatErrorLogEntry(error, "deleteInactiveAlerts"));
   }
 };
 
 async function main() {
   try {
+    console.clear();
+    console.log("Initializing storage.");
     initializeStorage();
+    console.log("Getting active alerts.");
     const activeAlerts = await getActiveAlertsForZone();
+    console.log("Deleting inactive alerts.");
     await deleteInactiveAlerts(activeAlerts);
+    console.log("Posting active alerts.");
     await postAlerts(activeAlerts);
+    console.log(`Starting again in ${INTERVAL} seconds.`);
   } catch (error) {
-    logError({ error, method: "main" });
+    logError(formatErrorLogEntry(error, "main"));
   }
 }
 
 main();
 setInterval(
-  () => main().catch((error) => logError({ error, method: "" })),
-  30000
+  () => main().catch((error) => logError(formatErrorLogEntry(error, "main"))),
+  INTERVAL * 1000
 );

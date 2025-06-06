@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:24-alpine
 
 WORKDIR /code
 
@@ -6,7 +6,7 @@ COPY package.json /code/package.json
 
 COPY yarn.lock /code/yarn.lock
 
-COPY .babelrc /code/.babelrc
+COPY tsconfig.json /code/tsconfig.json
 
 RUN yarn install
 

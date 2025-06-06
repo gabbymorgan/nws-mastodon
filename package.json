@@ -5,9 +5,8 @@
   "author": "Gabriella Morgan <gabriellapelton@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "build": "babel src -d dist",
-    "start": "yarn build && node dist/app.js",
-    "dev": "nodemon -r dotenv/config --exec babel-node src/app.js --watch src"
+    "dev": "tsc && node --env-file=.env dist/app.js",
+    "start": "tsc && node dist/app.js"
   },
   "dependencies": {
     "axios": "^1.5.0",
@@ -18,7 +17,9 @@
     "@babel/core": "^7.22.20",
     "@babel/node": "^7.22.19",
     "@babel/preset-env": "^7.22.20",
+    "@types/node": "^22.15.30",
     "dotenv": "^16.3.1",
-    "nodemon": "^3.0.1"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   }
 }
