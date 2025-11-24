@@ -1,6 +1,7 @@
 import fs from 'fs';
 import axios from "axios";
 import express from "express";
+import cors from "cors";
 import {
   addPostedAlertToJson,
   removeAlertFromJson,
@@ -19,7 +20,12 @@ import { deleteStatus, getAllStatuses, postHeadStatus, postNonheadStatus } from 
 import { NWSAlert, PostedAlert } from "./types";
 
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || "http://localhost";
 const api = express()
+
+api.use(cors({
+    origin: HOST // Allow requests only from this origin
+}));
 
 const INTERVAL = Number(process.env.INTERVAL) || 30;
 
