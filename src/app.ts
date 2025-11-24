@@ -18,14 +18,23 @@ import {
 } from "./textFormatting";
 import { deleteStatus, getAllStatuses, postHeadStatus, postNonheadStatus } from "./mastodonAPI";
 import { NWSAlert, PostedAlert } from "./types";
+import expressBasicAuth from 'express-basic-auth';
 
 const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || "http://localhost";
+const HOST = process.env.HOST || "http://localhost:3000";
+const USERNAME = process.env.API_USER || "admin"
+const PASSWORD = process.env.API_PASSWORD|| "changeme"
+
 const api = express()
 
 api.use(cors({
-    origin: HOST // Allow requests only from this origin
+  origin: HOST // Allow requests only from this origin
 }));
+
+api.use(expressBasicAuth({
+  users: { [USERNAME]: PASSWORD },
+  challenge: true,
+}))
 
 const INTERVAL = Number(process.env.INTERVAL) || 30;
 
@@ -72,7 +81,7 @@ const postAlert = async (alert: NWSAlert) => {
     );
 
     if (!postHeadStatusResponse.success) {
-      throw(postHeadStatusResponse.error)
+      throw (postHeadStatusResponse.error)
     }
 
     let previousStatusId = postHeadStatusResponse?.response.data.id;
@@ -180,28 +189,28 @@ api.get('/', (req, res) => {
 
 api.post('/start', async (req, res) => {
   await initiateMainLoop();
-  res.status(200).json({message: "OK!"})
+  res.status(200).json({ message: "OK!" })
 })
 
 api.post('/stop', async (req, res) => {
   clearInterval(mainLoop);
   loopIsLooping = false;
-  res.status(200).json({message: "OK!"})
+  res.status(200).json({ message: "OK!" })
 })
 
 api.post('/purgeAllStatuses', async (req, res) => {
   await purgeAllStatuses();
-  res.status(200).json({message: "OK!"})
+  res.status(200).json({ message: "OK!" })
 })
 
 api.post("/purgePostedAlertsLog", async (req, res) => {
   await purgePostedAlerts();
-  res.status(200).json({message: "OK!"})
+  res.status(200).json({ message: "OK!" })
 })
 
 api.post("/purgeErrors", async (req, res) => {
   await purgeErrorLog();
-  res.status(200).json({message: "OK!"})
+  res.status(200).json({ message: "OK!" })
 })
 
 api.listen(PORT, () => {

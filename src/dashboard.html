@@ -17,12 +17,6 @@
     <div class="container">
         <h1>API Dashboard</h1>
 
-        <div class="login-container">
-            <input type="text" id="username" placeholder="Username">
-            <input type="password" id="password" placeholder="Password">
-            <button onclick="setCredentials()">Save Credentials</button>
-        </div>
-
         <div class="button-group">
             <button onclick="callApi('start')">Start</button>
             <button onclick="callApi('stop')">Stop</button>
@@ -36,33 +30,13 @@
     </div>
 
     <script>
-        let username = '';
-        let password = '';
         const statusDiv = document.getElementById('status');
-
-        function setCredentials() {
-            username = document.getElementById('username').value;
-            password = document.getElementById('password').value;
-            statusDiv.textContent = 'Credentials saved.';
-        }
-
         async function callApi(endpoint) {
-            if (!username || !password) {
-                statusDiv.textContent = 'Error: Please enter credentials.';
-                return;
-            }
-
-            // Base64 encode credentials for Basic Auth
-            const credentials = btoa(`${username}:${password}`);
 
             try {
                 statusDiv.textContent = `Calling ${endpoint}...`;
                 const response = await fetch(`http://localhost:3000/${endpoint}`, {
                     method: 'POST', // Use POST for actions
-                    headers: {
-                        'Authorization': `Basic ${credentials}`,
-                        'Content-Type': 'application/json'
-                    },
                     body: JSON.stringify({ action: endpoint })
                 });
 
