@@ -1,22 +1,25 @@
+import fs from 'fs';
 import axios from "axios";
+import express from "express";
 import {
   addPostedAlertToJson,
   removeAlertFromJson,
   getPostedAlerts,
   logError,
   initializeStorage,
+  purgePostedAlerts,
+  purgeErrorLog,
 } from "./storage";
 import {
   formatErrorLogEntry,
   formatHeadStatus,
   formatNonheadStatus,
 } from "./textFormatting";
-import { deleteStatus, postHeadStatus, postNonheadStatus } from "./weatherAPI";
+import { deleteStatus, getAllStatuses, postHeadStatus, postNonheadStatus } from "./mastodonAPI";
 import { NWSAlert, PostedAlert } from "./types";
 
-axios.defaults.headers.common[
-  "Authorization"
-] = `Bearer ${process.env.AUTH_TOKEN}`;
+const PORT = process.env.PORT || 3000;
+const api = express()
 
 const INTERVAL = Number(process.env.INTERVAL) || 30;
 
@@ -41,8 +44,11 @@ const postAlert = async (alert: NWSAlert) => {
         (postedAlert: PostedAlert) => postedAlert.alertId === alert.id
       )
     ) {
+      console.log("alert already posted")
       return;
     }
+
+    // else return
 
     const alertComponents = [alert.properties.headline];
     if (alert.properties.parameters.NWSheadline) {
@@ -59,7 +65,11 @@ const postAlert = async (alert: NWSAlert) => {
       formatHeadStatusResponse.formattedText
     );
 
-    let previousStatusId = postHeadStatusResponse.response?.data.id;
+    if (!postHeadStatusResponse.success) {
+      throw(postHeadStatusResponse.error)
+    }
+
+    let previousStatusId = postHeadStatusResponse?.response.data.id;
     const statusIds = [previousStatusId];
 
     while (messageBody && messageBody.length) {
@@ -69,7 +79,7 @@ const postAlert = async (alert: NWSAlert) => {
         formatNonheadStatusResponse.formattedText,
         previousStatusId
       );
-      previousStatusId = postNonheadStatusResponse.response?.data.id;
+      previousStatusId = postNonheadStatusResponse?.response.data.id;
       statusIds.push(previousStatusId);
       messageBody = formatNonheadStatusResponse.remainder;
     }
@@ -113,9 +123,27 @@ const deleteInactiveAlerts = async (activeAlerts: NWSAlert[]) => {
   }
 };
 
+const purgeAllStatuses = async () => {
+  try {
+    const getAllStatusesResponse = await getAllStatuses(process.env.ACCOUNT_ID);
+    const statuses = getAllStatusesResponse?.response.data;
+    if (statuses && statuses.length) {
+      await Promise.all(statuses.map(async (status) => await deleteStatus(status.id)));
+    }
+  }
+  catch (error) {
+    logError(formatErrorLogEntry(error, "purgeAllStatuses"))
+  }
+}
+
+const purgeStatusLogs = () => {
+
+}
+
 async function main() {
   try {
     console.clear();
+    console.log(new Date().toString())
     console.log("Initializing storage.");
     initializeStorage();
     console.log("Getting active alerts.");
@@ -130,8 +158,46 @@ async function main() {
   }
 }
 
-main();
-setInterval(
-  () => main().catch((error) => logError(formatErrorLogEntry(error, "main"))),
-  INTERVAL * 1000
-);
+let loopIsLooping = false;
+let mainLoop;
+
+const initiateMainLoop = async () => {
+  loopIsLooping = true;
+  await main();
+  mainLoop = setInterval(main, INTERVAL * 1000);
+}
+
+api.get('/', (req, res) => {
+  const dashboard = fs.readFileSync('./src/dashboard.html', 'utf-8')
+  res.status(200).send(dashboard);
+});
+
+api.post('/start', async (req, res) => {
+  await initiateMainLoop();
+  res.status(200).json({message: "OK!"})
+})
+
+api.post('/stop', async (req, res) => {
+  clearInterval(mainLoop);
+  loopIsLooping = false;
+  res.status(200).json({message: "OK!"})
+})
+
+api.post('/purgeAllStatuses', async (req, res) => {
+  await purgeAllStatuses();
+  res.status(200).json({message: "OK!"})
+})
+
+api.post("/purgePostedAlertsLog", async (req, res) => {
+  await purgePostedAlerts();
+  res.status(200).json({message: "OK!"})
+})
+
+api.post("/purgeErrors", async (req, res) => {
+  await purgeErrorLog();
+  res.status(200).json({message: "OK!"})
+})
+
+api.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 400px; margin: auto; }
+        .button-group button { margin: 10px 0; padding: 10px; width: 100%; font-size: 16px; cursor: pointer; }
+        #status { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; }
+        .login-container { margin-bottom: 20px; }
+        input { padding: 10px; width: 100%; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API Dashboard</h1>
+
+        <div class="login-container">
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="setCredentials()">Save Credentials</button>
+        </div>
+
+        <div class="button-group">
+            <button onclick="callApi('start')">Start</button>
+            <button onclick="callApi('stop')">Stop</button>
+            <button onclick="callApi('purgeAllStatuses')">Purge Statuses</button>
+            <button onclick="callApi('purgePostedAlertsLog')">Purge Alert Log</button>
+            <button onclick="callApi('purgeErrors')">Purge Error Log</button>
+        </div>
+        
+        <h3>Status:</h3>
+        <div id="status">Ready</div>
+    </div>
+
+    <script>
+        let username = '';
+        let password = '';
+        const statusDiv = document.getElementById('status');
+
+        function setCredentials() {
+            username = document.getElementById('username').value;
+            password = document.getElementById('password').value;
+            statusDiv.textContent = 'Credentials saved.';
+        }
+
+        async function callApi(endpoint) {
+            if (!username || !password) {
+                statusDiv.textContent = 'Error: Please enter credentials.';
+                return;
+            }
+
+            // Base64 encode credentials for Basic Auth
+            const credentials = btoa(`${username}:${password}`);
+
+            try {
+                statusDiv.textContent = `Calling ${endpoint}...`;
+                const response = await fetch(`http://localhost:3000/${endpoint}`, {
+                    method: 'POST', // Use POST for actions
+                    headers: {
+                        'Authorization': `Basic ${credentials}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ action: endpoint })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    statusDiv.textContent = `Success for ${endpoint}: ${result.message}`;
+                } else {
+                    const errorText = await response.text();
+                    statusDiv.textContent = `Error for ${endpoint}: ${response.status} ${errorText}`;
+                }
+            } catch (error) {
+                statusDiv.textContent = `Network error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

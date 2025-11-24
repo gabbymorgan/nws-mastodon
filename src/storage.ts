@@ -44,3 +44,11 @@ export const getPostedAlerts = (): PostedAlert[] =>
 export const logError = (errorLogEntry: string): void => {
   fs.appendFileSync("./data/errors.log", errorLogEntry);
 };
+
+export const purgePostedAlerts = () => {
+  fs.writeFileSync("./data/posted-alerts.json", "[]")
+}
+
+export const purgeErrorLog = () => {
+  fs.writeFileSync("./data/errors.log", "")
+}

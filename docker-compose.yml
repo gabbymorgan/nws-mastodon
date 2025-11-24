@@ -1,8 +1,9 @@
 services:
   nws-mastodon:
-    image: nws-mastodon
+    build: .
+    restart: unless-stopped
     container_name: nws-mastodon
     env_file: .env
     command: yarn start
-
-
+    ports:
+      - 3000:3000
